@@ -269,3 +269,4 @@ ys.run_pass("write_verilog -sv out.sv", design)
 print("\n\n\n")
 print(f'Total DFFs processed: {dff_cnt}')
 print("SCAN CHAIN ADDITION COMPLETED\n")
+
