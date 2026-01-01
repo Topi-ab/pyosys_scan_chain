@@ -10,6 +10,7 @@ endmodule
 
 module counter_8bit(
     input logic clk_in,
+    input logic sreset_in,
     input logic en_in,
     output logic [7:0] count_out,
     output logic [7:0] c2_out,
@@ -28,8 +29,11 @@ module counter_8bit(
     );
 
     always_ff @(posedge clk_in) begin
-        if (en_d1)
+        if(en_d1)
             count_out <= count_out + 8'd1;
+        
+        if(sreset_in)
+            count_out <= '0;
     end
 
     always_ff @(posedge clk_in) begin

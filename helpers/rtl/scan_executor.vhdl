@@ -117,5 +117,7 @@ begin
 
         scan_enable_out <= next_execute.scan_enable;
         scan_clk_en_out <= next_execute.clk_enable;
+
+        to_chain_out <= from_chain_in;
     end process;
 end;

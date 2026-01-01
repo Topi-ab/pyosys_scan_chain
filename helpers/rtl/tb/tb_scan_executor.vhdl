@@ -24,6 +24,32 @@ architecture tb of tb_scan_executor is
     signal scan_clk_en: std_logic;
     signal from_chain: std_logic;
     signal to_chain: std_logic;
+
+    signal emu_clk_en: std_logic;
+    signal emu_clk: std_logic;
+
+    signal run_en: std_logic;
+
+    signal emu_sreset: std_logic;
+
+    component counter_8bit is
+        port(
+            scan_enable_in: in std_logic;
+            scan_in: in std_logic;
+            scan_out: out std_logic;
+
+            clk_in: in std_logic;
+            sreset_in: in std_logic;
+            en_in: in std_logic;
+            count_out: out std_logic_vector(7 downto 0);
+            c2_out: out std_logic_vector(7 downto 0);
+            c3_out: out std_logic_vector(7 downto 0);
+            c4: out std_logic;
+            c5: out std_logic_vector(7 downto 0);
+            c6: out std_logic;
+            c7: out std_logic_vector(7 downto 0)
+        );
+    end component;
 begin
     clk_pr: process
     begin
@@ -45,12 +71,23 @@ begin
     executor_pr: process
     begin
         execute_valid <= '0';
+        run_en <= '0';
 
         wait until sreset = '0' and rising_edge(clk);
+        
+        run_en <= '1';
+        wait until rising_edge(clk);
+        emu_sreset <= '1';
+        wait until rising_edge(clk);
+        emu_sreset <= '0';
 
-        for i in 1 to 20 loop
+        for i in 1 to 100 loop
             wait until rising_edge(clk);
         end loop;
+
+        run_en <= '0';
+
+        wait until rising_edge(clk);
 
         execute_valid <= '1';
         wait until rising_edge(clk) and execute_valid = '1' and execute_ready = '1';
@@ -60,7 +97,7 @@ begin
         wait;
     end process;
 
-    scan_pr: process
+    /*scan_pr: process
         variable k: integer range 0 to 6;
     begin
         k := 0;
@@ -85,7 +122,41 @@ begin
             wait until rising_edge(clk) and scan_enable = '1' and scan_clk_en = '1';
             k := (k + 1) mod 6;
         end loop;
+    end process;*/
+
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            if scan_clk_en = '1' then
+                emu_clk <= '1';
+            end if;
+
+            if run_en = '1' then
+                emu_clk <= '1';
+            end if;
+        end if;
+
+        if falling_edge(clk) then
+            emu_clk <= '0';
+        end if;
     end process;
+
+    scan_dut: entity work.counter_8bit
+        port map(
+            scan_enable_in => scan_enable,
+            scan_in => to_chain,
+            scan_out => from_chain,
+            clk_in => emu_clk,
+            sreset_in => emu_sreset,
+            en_in => '1',
+            count_out => open,
+            c2_out => open,
+            c3_out => open,
+            c4 => open,
+            c5 => open,
+            c6 => open,
+            c7 => open
+        );
 
     capture_pr: process
     begin
@@ -93,11 +164,12 @@ begin
             captured_ready <= '1';
             wait until rising_edge(clk);
             captured_ready <= '0';
+            captured_ready <= '1';
             for i in 1 to 10 loop
                 wait until rising_edge(clk);
             end loop;
         end loop;
-        
+
         wait;
     end process;
 
