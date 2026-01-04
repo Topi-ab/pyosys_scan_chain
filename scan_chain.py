@@ -103,35 +103,6 @@ class TestClass:
             i += 1
         return r
     
-    def AddScanPorts(self, module: ys.Module):
-        clocks = self.EnumerateClocks(module)
-        self.ModuleScanportInfo[module] = TestClass.ModuleEntry
-        self.ModuleScanportInfo[module].scan_chains = []
-
-        for i, clk in clocks:
-            scan_in_port = module.addWire(f"\\scan_{i}_in")
-            scan_in_port.port_input = True
-
-            scan_out_port = module.addWire(f"\\scan_{i}_out")
-            scan_out_port.port_output = True
-
-            self.ModuleScanportInfo[module].scan_chains.append(TestClass.ModuleEntry.ScanInfo(
-                scan_in=scan_in_port,
-                scan_out=scan_out_port,
-                clk_in=clk
-            ))
-
-        en_port = module.addWire("\\scan_enable_in")
-        en_port.port_input = True
-
-        scan_in_port = module.addWire("\\scan_in")
-        scan_in_port.port_input = True
-
-        scan_out_port = module.addWire("\\scan_out")
-        scan_out_port.port_output = True
-
-        module.fixup_ports()
-
     def generateModulePorts(self):
         for module in self.ModulesByDepth():
             info = self.ModuleScanportInfo.get(module)
