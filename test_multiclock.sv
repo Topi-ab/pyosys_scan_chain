@@ -15,19 +15,22 @@ module submod(
     always_ff @(posedge a_clk_in) begin
         if(areset_in)
             a_data_out <= 0;
-        a_data_out <= a_data_in;
+        else
+            a_data_out <= a_data_in;
     end
 
     always_ff @(posedge b_clk_in) begin
         if(areset_in)
             b_data_out <= 0;
-        b_data_out <= b_data_in;
+        else
+            b_data_out <= b_data_in;
     end
 
     always_ff @(posedge c_clk_in) begin
         if(areset_in)
             c_data_out <= 0;
-        c_data_out <= c_data_in;
+        else
+            c_data_out <= c_data_in;
     end
 endmodule
 
@@ -52,13 +55,15 @@ module test_multiclock(
     always_ff @(posedge a_clk_in) begin
         if(areset_in)
             sub_a_i <= 0;
-        sub_a_i <= a_data_in;
+        else
+            sub_a_i <= a_data_in;
     end
 
     always_ff @(posedge b_clk_in) begin
         if(areset_in)
             sub_b_i <= 0;
-        sub_b_i <= b_data_in;
+        else
+            sub_b_i <= b_data_in;
     end
 
     assign sub_c_i = sub_b_i;

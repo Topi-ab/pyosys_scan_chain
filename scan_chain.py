@@ -11,14 +11,13 @@ def fresh_id(prefix: str = None) -> ys.IdString:
 class TestClass:
     @dataclass
     class ModuleEntry:
-        scan_chains: list["TestClass.ModuleEntry.ScanInfo"] = field(default_factory=list)
+        scan_chains: dict[ys.Wire, "TestClass.ModuleEntry.ScanInfo"] = field(default_factory=dict)
         enable_port: ys.Wire = None
 
         @dataclass
         class ScanInfo:
             scan_in: ys.Wire
             scan_out: ys.Wire
-            clk_in: ys.Wire
             dff_cnt: int = 0
 
     def __init__(self, design: ys.Design, top_module: ys.Module):
@@ -66,8 +65,9 @@ class TestClass:
                     submod = self._design.modules_[cell.type]
                     submod_clocks_info = self.ModuleScanportInfo.get(submod)
                     if submod_clocks_info is not None:
-                        for scan_info in submod_clocks_info.scan_chains:
-                            clk_port = cell.getPort(scan_info.clk_in.name).as_wire()
+                        for clk in submod_clocks_info.scan_chains:
+                            scan_info = submod_clocks_info.scan_chains[clk]
+                            clk_port = cell.getPort(clk.name).as_wire()
                             if clk_port not in clocks:
                                 clocks[clk_port] = scan_info.dff_cnt
                             else:
@@ -78,13 +78,12 @@ class TestClass:
                 if self.ModuleScanportInfo[module].scan_chains is None:
                     self.ModuleScanportInfo[module].scan_chains = []
             for clk in clocks:
-                e: TestClass.ModuleEntry.ScanInfo = TestClass.ModuleEntry.ScanInfo(
+                e = TestClass.ModuleEntry.ScanInfo(
                     scan_in=None,
                     scan_out=None,
-                    clk_in=clk,
                     dff_cnt=clocks[clk]
                 )
-                self.ModuleScanportInfo[module].scan_chains.append(e)
+                self.ModuleScanportInfo[module].scan_chains[clk] = e
 
     def EnumerateClocks(self, module: ys.Module):
         clocks = set()
@@ -108,17 +107,19 @@ class TestClass:
             info = self.ModuleScanportInfo.get(module)
             assert info is not None, "Module scan port information not found."
 
-            en_port = module.addWire("\\scan_enable_in")
+            en_port = module.addWire("$scan_enable_in")
             en_port.port_input = True
 
-            for i, scan_info in enumerate(info.scan_chains):
-                scan_in_port = module.addWire(f"\\scan_{i}_in")
+            i = 0
+            for clk in info.scan_chains:
+                scan_in_port = module.addWire(f"$scan_{i}_in")
                 scan_in_port.port_input = True
-                scan_out_port = module.addWire(f"\\scan_{i}_out")
+                scan_out_port = module.addWire(f"$scan_{i}_out")
                 scan_out_port.port_output = True
-                self.ModuleScanportInfo[module].scan_chains[i].scan_in = scan_in_port
-                self.ModuleScanportInfo[module].scan_chains[i].scan_out = scan_out_port
-                self.ModuleScanportInfo[module].enable_port = en_port
+                self.ModuleScanportInfo[module].scan_chains[clk].scan_in = scan_in_port
+                self.ModuleScanportInfo[module].scan_chains[clk].scan_out = scan_out_port
+                i += 1
+            self.ModuleScanportInfo[module].enable_port = en_port
             module.fixup_ports()
 
     
@@ -137,15 +138,12 @@ class TestClass:
             print(f'Creataing a scan chain to module: {module.name.str()}')
             info = self.ModuleScanportInfo.get(module)
             assert info is not None, "Module scan port information not found."
-            clocks: dict[ys.Wire, int] = {}
-            for i, scan_info in enumerate(info.scan_chains):
-                clocks[scan_info.clk_in] = i
             flops: dict[ys.Wire, set[list[ys.Cell]]] = {}
             cells = list(module.cells_.values())
             for cell in cells:
                 if cell.is_builtin_ff():
                     clk_port = cell.getPort("\\CLK").as_wire()
-                    assert clk_port in clocks, "Clock port not found in module scan port information."
+                    assert clk_port in info.scan_chains, "Clock port not found in module scan port information."
                     if flops.get(clk_port) is None:
                         flops[clk_port] = set()
                     flops[clk_port].add(cell)
@@ -153,17 +151,17 @@ class TestClass:
                     submod = self._design.modules_[cell.type]
                     submod_info = self.ModuleScanportInfo.get(submod)
                     assert submod_info is not None, "Submodule scan port information not found."
-                    for scan_info in submod_info.scan_chains:
-                        clk_port = cell.getPort(scan_info.clk_in.name).as_wire()
-                        assert clk_port in clocks, "Clock port not found in module scan port information."
+                    for clk in submod_info.scan_chains:
+                        clk_port = cell.getPort(clk.name).as_wire()
+                        assert clk_port in info.scan_chains, "Clock port not found in module scan port information."
                         if flops.get(clk_port) is None:
                             flops[clk_port] = set()
                         flops[clk_port].add(cell)
             for clk in flops:
                 print(f' Generating scan chain for clock: {clk.name.str()}')
-                en_port = ys.SigSpec(module.wire("\\scan_enable_in"))
-                scan_in_port = ys.SigSpec(info.scan_chains[clocks[clk]].scan_in)
-                scan_out_port = ys.SigSpec(info.scan_chains[clocks[clk]].scan_out)
+                en_port = ys.SigSpec(module.wire("$scan_enable_in"))
+                scan_in_port = ys.SigSpec(info.scan_chains[clk].scan_in)
+                scan_out_port = ys.SigSpec(info.scan_chains[clk].scan_out)
                 dff_set = set()
                 for cell in flops[clk]:
                     if cell.is_builtin_ff():
@@ -317,8 +315,9 @@ class TestClass:
                         assert submod_info is not None, "Submodule scan port information not found."
                         e_port = submod_info.enable_port
                         cell.setPort(e_port.name, en_port)
-                        for e in submod_info.scan_chains:
-                            if cell.getPort(e.clk_in.name).as_wire() is clk:
+                        for sub_clk in submod_info.scan_chains:
+                            e = submod_info.scan_chains[sub_clk]
+                            if cell.getPort(sub_clk.name).as_wire() is clk:
                                 s_in = module.addWire(fresh_id(), 1)
                                 s_out = module.addWire(fresh_id(), 1)
                                 cell.setPort(e.scan_in.name, ys.SigSpec(s_in))
@@ -339,8 +338,9 @@ class TestClass:
 
     def ScanInfo(self) -> str:
         r = ""
-        for scan_info in self.ModuleScanportInfo[self._top_module].scan_chains:
-            r += f'Clock: {scan_info.clk_in.name.str()}\n'
+        for clk in self.ModuleScanportInfo[self._top_module].scan_chains:
+            scan_info = self.ModuleScanportInfo[self._top_module].scan_chains[clk]
+            r += f'Clock: {clk.name.str()}\n'
             r += f'\tFF count: {scan_info.dff_cnt}\n'
             r += f'\tscan input port: {scan_info.scan_in.name.str()}\n'
             r += f'\tscan output port: {scan_info.scan_out.name.str()}\n'
@@ -351,7 +351,73 @@ class TestClass:
     
     def generatePorts(self):
         self.generateModulePorts()
+    
+    def CreateTopWrapper(self):
+        top_module = self._top_module
+        wires = list(top_module.wires_.values())
+        input_ports = []
+        input_bits = 0
+        output_ports = []
+        output_bits = 0
+        clk_ports = []
+        clk_bits = 0
 
+        scan_ports = set()
+        for clk in self.ModuleScanportInfo[top_module].scan_chains:
+            scan_ports.add(self.ModuleScanportInfo[top_module].scan_chains[clk].scan_in)
+            scan_ports.add(self.ModuleScanportInfo[top_module].scan_chains[clk].scan_out)
+        scan_ports.add(self.ModuleScanportInfo[top_module].enable_port)
+
+        for wire in wires:
+            if wire.port_input:
+                if wire in self.ModuleScanportInfo[top_module].scan_chains:
+                    clk_ports.append(wire)
+                    clk_bits += wire.width
+                elif wire not in scan_ports:
+                    input_ports.append(wire)
+                    input_bits += wire.width
+            if wire.port_output:
+                if wire not in scan_ports:
+                    output_ports.append(wire)
+                    output_bits += wire.width
+        top_wrapper = self._design.addModule(f"{top_module.name}_top_wrapper")
+        scan_en_in = top_wrapper.addWire("\\scan_enable_in", 1)
+        scan_en_in.port_input = True
+        scan_in = top_wrapper.addWire("\\scan_in", clk_bits)
+        scan_in.port_input = True
+        scan_out = top_wrapper.addWire("\\scan_out", clk_bits)
+        scan_out.port_output = True
+        clk_in = top_wrapper.addWire("\\clk_in", clk_bits)
+        clk_in.port_input = True
+        dut_in = top_wrapper.addWire("\\dut_in", input_bits)
+        dut_in.port_input = True
+        dut_out = top_wrapper.addWire("\\dut_out", output_bits)
+        dut_out.port_output = True
+        top_wrapper.fixup_ports()
+
+        dut_cell = top_wrapper.addCell("\\dut", top_module.name)
+        dut_enable = self.ModuleScanportInfo[top_module].enable_port
+        dut_cell.setPort(dut_enable.name, ys.SigSpec(scan_en_in))
+
+        pos = 0
+        for i, wire in enumerate(input_ports):
+            dut_cell.setPort(wire.name, ys.SigSpec(ys.SigSpec(dut_in)[pos], wire.width))
+            pos += wire.width
+        pos = 0
+        for i, wire in enumerate(output_ports):
+            dut_cell.setPort(wire.name, ys.SigSpec(ys.SigSpec(dut_out)[pos], wire.width))
+            pos += wire.width
+        pos = 0
+        for clk in self.ModuleScanportInfo[top_module].scan_chains:
+            dut_cell.setPort(clk.name, ys.SigSpec(ys.SigSpec(clk_in)[pos], clk.width))
+            pos += clk.width
+        pos = 0
+        for clk in self.ModuleScanportInfo[top_module].scan_chains:
+            scan_info = self.ModuleScanportInfo[top_module].scan_chains[clk]
+            dut_cell.setPort(scan_info.scan_in.name, ys.SigSpec(ys.SigSpec(scan_in)[pos], scan_info.scan_in.width))
+            dut_cell.setPort(scan_info.scan_out.name, ys.SigSpec(ys.SigSpec(scan_out)[pos], scan_info.scan_out.width))
+            pos += scan_info.scan_in.width
+        
     def processTop(self):
         # First find sorting order of modules based on the depth on the instantiation tree.
         # depth 0 -> modules with no submodule instantiations.
@@ -368,8 +434,7 @@ class TestClass:
         self.processClocks()
         self.generatePorts()
         self.generateMuxes()
-        #dff_cnt = self.processMuxes()
-        #return dff_cnt
+        self.CreateTopWrapper()
 
 ################
 # Testing =>
@@ -402,7 +467,7 @@ test.processTop()
 # ys.run_pass("opt")
 
 ys.run_pass("write_rtlil out.rtlil", design)
-ys.run_pass("write_verilog -sv out.sv", design)
+ys.run_pass("write_verilog -sv -norename out.sv", design)
 
 print("\n\n\n")
 
