@@ -1,0 +1,7 @@
+*.ys
+*.rtlil
+*.so
+*.o
+*.cf
+*.jou
+*.log
