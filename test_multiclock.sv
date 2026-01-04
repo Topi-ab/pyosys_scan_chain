@@ -13,24 +13,15 @@ module submod(
 );
 
     always_ff @(posedge a_clk_in) begin
-        if(areset_in)
-            a_data_out <= 0;
-        else
-            a_data_out <= a_data_in;
+        a_data_out <= a_data_in;
     end
 
     always_ff @(posedge b_clk_in) begin
-        if(areset_in)
-            b_data_out <= 0;
-        else
-            b_data_out <= b_data_in;
+        b_data_out <= b_data_in;
     end
 
     always_ff @(posedge c_clk_in) begin
-        if(areset_in)
-            c_data_out <= 0;
-        else
-            c_data_out <= c_data_in;
+        c_data_out <= c_data_in;
     end
 endmodule
 
