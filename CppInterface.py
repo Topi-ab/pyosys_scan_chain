@@ -57,33 +57,65 @@ public:
 """
         r += """    enum class clk_fields: std::size_t {
 """
+        first = True
         for f in json["clocks"]:
-            r += f"        CLK_{CppInterface.yosys2cpp_name(f['clk_in'])},\n"
-        r += "        END_OF_FIELDS\n"
-        r += "    };\n\n"
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"        CLK_{CppInterface.yosys2cpp_name(f['clk_in'])}"
+        r += "\n    };\n\n"
 
         r += """    enum class wr_fields: std::size_t {
 """
+        first = True
         for f in json["inputs"]:
-            r += f"        IN_{CppInterface.yosys2cpp_name(f['dut_in'])},\n"
-        r += "        END_OF_FIELDS\n"
-        r += "    };\n\n"
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"        IN_{CppInterface.yosys2cpp_name(f['dut_in'])}"
+        r += "\n    };\n\n"
 
         r += """    enum class rd_fields: std::size_t {
 """
+        first = True
         for f in json["outputs"]:
-            r += f"        OUT_{CppInterface.yosys2cpp_name(f['dut_out'])},\n"
-        r += "        END_OF_FIELDS\n"
-        r += "    };\n\n"
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"        OUT_{CppInterface.yosys2cpp_name(f['dut_out'])}"
+        r += "\n    };\n\n"
+
+        r += """    consteval static
+    auto get_clk_specs()
+    {
+        return std::to_array<FieldSpec<clk_fields>>({
+"""
+        first = True
+        for f in json["clocks"]:
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"            {{ clk_fields::CLK_{CppInterface.yosys2cpp_name(f['clk_in'])}, 1 }}"
+        r += """\n        });
+    }\n\n"""
 
         r += """    consteval static
     auto get_wr_specs()
     {
         return std::to_array<FieldSpec<wr_fields>>({
 """
+        first = True
         for f in json["inputs"]:
-            r += f"            {{ wr_fields::IN_{CppInterface.yosys2cpp_name(f['dut_in'])}, {f['width']} }},\n"
-        r += """        });
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"            {{ wr_fields::IN_{CppInterface.yosys2cpp_name(f['dut_in'])}, {f['width']} }}"
+        r += """\n        });
     }\n\n"""
 
         r += """    consteval static
@@ -91,9 +123,14 @@ public:
     {
         return std::to_array<FieldSpec<rd_fields>>({
 """
+        first = True
         for f in json["outputs"]:
-            r += f"            {{ rd_fields::OUT_{CppInterface.yosys2cpp_name(f['dut_out'])}, {f['width']} }},\n"
-        r += """        });
+            if not first:
+                r += ",\n"
+            else:
+                first = False
+            r += f"            {{ rd_fields::OUT_{CppInterface.yosys2cpp_name(f['dut_out'])}, {f['width']} }}"
+        r += """\n        });
     }\n"""
         r += "};\n"
 
