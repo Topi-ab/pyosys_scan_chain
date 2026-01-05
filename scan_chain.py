@@ -88,23 +88,6 @@ class TestClass:
                 )
                 self.ModuleScanportInfo[module].scan_chains[clk] = e
 
-    def EnumerateClocks(self, module: ys.Module):
-        clocks = set()
-        cells = list(module.cells_.values())
-        for cell in cells:
-            if cell.is_builtin_ff():
-                clk_port = cell.getPort("\\CLK").as_wire()
-                polarity = cell.getParam("\\CLK_POLARITY").as_int()
-                assert polarity == 1, "Unsupported clock polarity. Only positive edge supported."
-                assert clk_port.port_input, "Clock port is not input port. Unsupported clocking mode."
-                clocks.add(clk_port)
-        i = 0
-        r = set()
-        for clk in clocks:
-            r.add((i, clk))
-            i += 1
-        return r
-    
     def generateModulePorts(self):
         for module in self.ModulesByDepth():
             info = self.ModuleScanportInfo.get(module)
@@ -430,6 +413,7 @@ class TestClass:
             self.wrapper['outputs'].append({
                 "pos": pos,
                 "width": wire.width,
+                "upto": wire.upto,
                 "dut_out": wire.name.str(),
             })
             pos += wire.width
@@ -503,8 +487,8 @@ top_module = design.top_module()
 test = TestClass(design, top_module)
 test.processTop()
 
-#top_module.check()
-#ys.run_pass("check", design)
+top_module.check()
+# ys.run_pass("check", design)
 # ys.run_pass("opt")
 
 ys.run_pass("write_rtlil out.rtlil", design)
