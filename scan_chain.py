@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 
 import json
 
+from CppInterface import CppInterface
+
 def fresh_id(prefix: str = None) -> ys.IdString:
     if prefix is None:
         prefix = "$auto$"
@@ -341,6 +343,7 @@ class TestClass:
     
     def CreateTopWrapper(self):
         self.wrapper = {}
+        self.wrapper['dut_name'] = self._top_module.name.str()
         self.wrapper['inputs'] = []
         self.wrapper['outputs'] = []
         self.wrapper['clocks'] = []
@@ -376,18 +379,19 @@ class TestClass:
                 if wire not in scan_ports:
                     output_ports.append(wire)
                     output_bits += wire.width
-        top_wrapper = self._design.addModule(f"{top_module.name}_top_wrapper")
+        top_wrapper = self._design.addModule(f"\\emulator_wrapper")
         scan_en_in = top_wrapper.addWire("\\scan_enable_in", 1)
         scan_en_in.port_input = True
-        scan_in = top_wrapper.addWire("\\scan_in", clk_bits)
+        # +1 to avoid one-width wires, which will turn into non-vectors in Verilog ports.
+        scan_in = top_wrapper.addWire("\\scan_in", clk_bits + 1)
         scan_in.port_input = True
-        scan_out = top_wrapper.addWire("\\scan_out", clk_bits)
+        scan_out = top_wrapper.addWire("\\scan_out", clk_bits + 1)
         scan_out.port_output = True
-        clk_in = top_wrapper.addWire("\\clk_in", clk_bits)
+        clk_in = top_wrapper.addWire("\\clk_in", clk_bits + 1)
         clk_in.port_input = True
-        dut_in = top_wrapper.addWire("\\dut_in", input_bits)
+        dut_in = top_wrapper.addWire("\\dut_in", input_bits + 1)
         dut_in.port_input = True
-        dut_out = top_wrapper.addWire("\\dut_out", output_bits)
+        dut_out = top_wrapper.addWire("\\dut_out", output_bits + 1)
         dut_out.port_output = True
         top_wrapper.fixup_ports()
 
@@ -468,11 +472,14 @@ class TestClass:
 design = ys.Design()
 
 #test_name = "test_dffsr"
-#test_name = "counter_8bit"
+test_name = "counter_8bit"
 #test_name = "test_fsm"
-test_name = "test_multiclock"
+#test_name = "test_multiclock"
+
+#test_name = "vhdl_linkruncca"
 
 ys.run_pass(f"read_verilog -sv {test_name}.sv", design)
+#ys.run_pass("read_rtlil linkruncca.rtlil", design)
 ys.run_pass(f"prep -top {test_name}", design)
 
 ys.run_pass("proc", design)
@@ -502,3 +509,13 @@ print(test.ScanInfo())
 print("SCAN CHAIN ADDITION COMPLETED\n")
 
 print(f"JSON: {test.WrapperInfo()}")
+
+json_data = test.wrapper
+
+cpp_header = CppInterface.CreateCppInterface(json_data)
+
+#print("\n\nC++ INTERFACE HEADER:\n")
+#print(cpp_header)
+with open("wrapper_interface.h", "w") as f:
+    f.write(cpp_header)
+
