@@ -56,7 +56,6 @@ class TestClass:
             for cell in cells:
                 if cell.is_builtin_ff():
                     clk_port = cell.getPort("\\CLK").as_wire()
-                    #width = 1 ###############################
                     width = cell.getParam("\\WIDTH").as_int()
                     polarity = cell.getParam("\\CLK_POLARITY").as_int()
                     assert polarity == 1, "Unsupported clock polarity. Only positive edge supported."
@@ -131,6 +130,7 @@ class TestClass:
         # TODO: detect also $fsm.
         # TODO: Separate mechanism for memories.
         # TODO: Clock polarity.
+        # TODO: Point for optimization. Search for DFFs which are already chained together, and reuse those connections.
 
         # DFF types:
         # $sr $ff $dff $dffe $adff $adffe $aldff $aldffe $sdff $sdffe $sdffce $dffsr $dffsre $dlatch $adlatch $dlatchsr
