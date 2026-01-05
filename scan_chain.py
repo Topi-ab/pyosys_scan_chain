@@ -2,6 +2,8 @@ from pyosys import libyosys as ys
 
 from dataclasses import dataclass, field
 
+import json
+
 def fresh_id(prefix: str = None) -> ys.IdString:
     if prefix is None:
         prefix = "$auto$"
@@ -54,13 +56,15 @@ class TestClass:
             for cell in cells:
                 if cell.is_builtin_ff():
                     clk_port = cell.getPort("\\CLK").as_wire()
+                    #width = 1 ###############################
+                    width = cell.getParam("\\WIDTH").as_int()
                     polarity = cell.getParam("\\CLK_POLARITY").as_int()
                     assert polarity == 1, "Unsupported clock polarity. Only positive edge supported."
                     assert clk_port.port_input, "Clock port is not input port. Unsupported clocking mode."
                     if clk_port not in clocks:
-                        clocks[clk_port] = 1
+                        clocks[clk_port] = width
                     else:
-                        clocks[clk_port] += 1
+                        clocks[clk_port] += width
                 if cell.type in self._design.modules_:
                     submod = self._design.modules_[cell.type]
                     submod_clocks_info = self.ModuleScanportInfo.get(submod)
@@ -353,6 +357,15 @@ class TestClass:
         self.generateModulePorts()
     
     def CreateTopWrapper(self):
+        self.wrapper = {}
+        self.wrapper['inputs'] = []
+        self.wrapper['outputs'] = []
+        self.wrapper['clocks'] = []
+        self.wrapper['scan_chains'] = []
+        self.wrapper['asserts'] = []
+        self.wrapper['assumes'] = []
+        self.wrapper['covers'] = []
+
         top_module = self._top_module
         wires = list(top_module.wires_.values())
         input_ports = []
@@ -401,23 +414,50 @@ class TestClass:
 
         pos = 0
         for i, wire in enumerate(input_ports):
-            dut_cell.setPort(wire.name, ys.SigSpec(ys.SigSpec(dut_in)[pos], wire.width))
+            rhs = ys.SigChunk(dut_in, pos, wire.width)
+            dut_cell.setPort(wire.name, ys.SigSpec(rhs))
+            self.wrapper['inputs'].append({
+                "pos": pos,
+                "width": wire.width,
+                "upto": wire.upto,
+                "dut_in": wire.name.str(),
+            })
             pos += wire.width
         pos = 0
         for i, wire in enumerate(output_ports):
-            dut_cell.setPort(wire.name, ys.SigSpec(ys.SigSpec(dut_out)[pos], wire.width))
+            rhs = ys.SigChunk(dut_out, pos, wire.width)
+            dut_cell.setPort(wire.name, ys.SigSpec(rhs))
+            self.wrapper['outputs'].append({
+                "pos": pos,
+                "width": wire.width,
+                "dut_out": wire.name.str(),
+            })
             pos += wire.width
         pos = 0
         for clk in self.ModuleScanportInfo[top_module].scan_chains:
             dut_cell.setPort(clk.name, ys.SigSpec(ys.SigSpec(clk_in)[pos], clk.width))
+            self.wrapper['clocks'].append({
+                "pos": pos,
+                "clk_in": clk.name.str(),
+            })
             pos += clk.width
         pos = 0
         for clk in self.ModuleScanportInfo[top_module].scan_chains:
             scan_info = self.ModuleScanportInfo[top_module].scan_chains[clk]
             dut_cell.setPort(scan_info.scan_in.name, ys.SigSpec(ys.SigSpec(scan_in)[pos], scan_info.scan_in.width))
             dut_cell.setPort(scan_info.scan_out.name, ys.SigSpec(ys.SigSpec(scan_out)[pos], scan_info.scan_out.width))
+            self.wrapper['scan_chains'].append({
+                "pos": pos,
+                "clk_pos": pos,
+                "dff_cnt": scan_info.dff_cnt,
+            })
             pos += scan_info.scan_in.width
         
+    def WrapperInfo(self) -> str:
+        # Returns JSON string describing the wrapper ports relative to DUT ports.
+        return json.dumps(self.wrapper, indent=4)
+        
+
     def processTop(self):
         # First find sorting order of modules based on the depth on the instantiation tree.
         # depth 0 -> modules with no submodule instantiations.
@@ -435,6 +475,7 @@ class TestClass:
         self.generatePorts()
         self.generateMuxes()
         self.CreateTopWrapper()
+        
 
 ################
 # Testing =>
@@ -476,3 +517,4 @@ print(test.ScanInfo())
 
 print("SCAN CHAIN ADDITION COMPLETED\n")
 
+print(f"JSON: {test.WrapperInfo()}")

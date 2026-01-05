@@ -4,8 +4,8 @@ module submod(
     output logic a_data_out,
 
     input logic b_clk_in,
-    input logic b_data_in,
-    output logic b_data_out,
+    input logic [7:0] b_data_in,
+    output logic [7:0] b_data_out,
 
     input logic c_clk_in,
     input logic c_data_in,
@@ -33,14 +33,14 @@ module test_multiclock(
     output logic a_data_out,
 
     input logic b_clk_in,
-    input logic b_data_in,
-    output logic b_data_out,
+    input logic [7:0] b_data_in,
+    output logic [7:0] b_data_out,
 
     input logic c_data_in,
     output logic c_data_out
 );
     logic sub_a_i;
-    logic sub_b_i;
+    logic [7:0] sub_b_i;
     logic sub_c_i;
 
     always_ff @(posedge a_clk_in) begin
@@ -52,12 +52,12 @@ module test_multiclock(
 
     always_ff @(posedge b_clk_in) begin
         if(areset_in)
-            sub_b_i <= 0;
+            sub_b_i <= '0;
         else
             sub_b_i <= b_data_in;
     end
 
-    assign sub_c_i = sub_b_i;
+    assign sub_c_i = c_data_in;
 
     submod sub_i(
         .a_clk_in(a_clk_in),
