@@ -16,6 +16,7 @@ class ScanChainBuilder:
             prefix = "$auto$"
         r = ys.IdString.new_autoidx_with_prefix(prefix)
         return r
+
     @dataclass
     class ModuleEntry:
         scan_chains: dict[ys.Wire, "ScanChainBuilder.ModuleEntry.ScanInfo"] = field(default_factory=dict)
@@ -385,6 +386,7 @@ class ScanChainBuilder:
         top_wrapper = self._design.addModule(f"\\emulator_wrapper")
         scan_en_in = top_wrapper.addWire("\\scan_enable_in", 1)
         scan_en_in.port_input = True
+
         # +1 to avoid one-width wires, which will turn into non-vectors in Verilog ports.
         scan_in = top_wrapper.addWire("\\scan_in", clk_bits + 1)
         scan_in.port_input = True
@@ -495,6 +497,8 @@ class ScanChainApp:
         top: str | None = None,
         pre_script: str | None = None,
         post_script: str | None = None,
+        log_dir: str | None = None,
+        json_path: str | None = None,
     ):
         design = ys.Design()
         design_path, top_name, example_dir = self._resolve_input(example, design_path, top)
@@ -504,13 +508,15 @@ class ScanChainApp:
         if post_script is None:
             raise ValueError("Post-scan script required. Pass --post-script.")
 
-        os.makedirs("generated/log", exist_ok=True)
+        if log_dir is None:
+            log_dir = "generated/log"
+        os.makedirs(log_dir, exist_ok=True)
 
         saved_stdout_fd = os.dup(1)
         saved_stderr_fd = os.dup(2)
         try:
-            with open("generated/log/yosys_pre.log", "w") as log_f, \
-                open("generated/log/yosys_pre.err.log", "w") as err_f:
+            with open(f"{log_dir}/yosys_pre.log", "w") as log_f, \
+                open(f"{log_dir}/yosys_pre.err.log", "w") as err_f:
                 os.dup2(log_f.fileno(), 1)
                 os.dup2(err_f.fileno(), 2)
 
@@ -529,16 +535,14 @@ class ScanChainApp:
         test.processTop()
 
         top_module.check()
-        # ys.run_pass("check", design)
-        # ys.run_pass("opt")
 
         os.makedirs("generated/rtl", exist_ok=True)
 
         saved_stdout_fd = os.dup(1)
         saved_stderr_fd = os.dup(2)
         try:
-            with open("generated/log/yosys_post.log", "w") as log_f, \
-                open("generated/log/yosys_post.err.log", "w") as err_f:
+            with open(f"{log_dir}/yosys_post.log", "w") as log_f, \
+                open(f"{log_dir}/yosys_post.err.log", "w") as err_f:
                 os.dup2(log_f.fileno(), 1)
                 os.dup2(err_f.fileno(), 2)
                 ys.run_pass(f"script {post_script}", design)
@@ -555,15 +559,16 @@ class ScanChainApp:
 
         print("SCAN CHAIN ADDITION COMPLETED\n")
 
-        # JSON output suppressed; keep stdout informational only.
-
         json_data = test.wrapper
 
         cpp_header = CppInterface.CreateCppInterface(json_data)
         callers_header = CppInterface.CreateFieldCallersHeader(json_data)
 
-        #print("\n\nC++ INTERFACE HEADER:\n")
-        #print(cpp_header)
+        if json_path is not None:
+            os.makedirs(os.path.dirname(json_path) or ".", exist_ok=True)
+            with open(json_path, "w") as f:
+                f.write(test.WrapperInfo())
+
         os.makedirs("generated/include", exist_ok=True)
         with open("generated/include/wrapper_interface.h", "w") as f:
             f.write(cpp_header)
@@ -577,6 +582,8 @@ def _parse_args():
     parser.add_argument("--top", help="Top module name for --design.")
     parser.add_argument("--pre-script", help="Yosys script to run before scan-chain insertion.")
     parser.add_argument("--post-script", help="Yosys script to run after scan-chain insertion.")
+    parser.add_argument("--log-dir", help="Directory for Yosys logs (defaults to generated/log).")
+    parser.add_argument("--json", help="Write wrapper JSON to the given path.")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -588,4 +595,6 @@ if __name__ == "__main__":
         top=args.top,
         pre_script=args.pre_script,
         post_script=args.post_script,
+        log_dir=args.log_dir,
+        json_path=args.json,
     )
