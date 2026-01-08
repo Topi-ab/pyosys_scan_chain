@@ -124,3 +124,10 @@ scripts/vivado/run_vivado.sh --recreate-project
 ```
 
 This creates/opens the project under `generated/vivado` and opens the elaborated RTL view.
+
+## Vivado schematic example
+
+Below is a Vivado schematic view of the scan chain for the 2x2 pipeline example:
+
+![Vivado RTL schematic with scan chain highlighted](docs/images/vivado_pipeline_2x2_scan_chain.png)
+
