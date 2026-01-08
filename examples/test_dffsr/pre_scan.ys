@@ -1,0 +1,5 @@
+# Pre-scan Yosys script
+read_verilog -sv examples/test_dffsr/test_dffsr.sv
+prep -top test_dffsr
+proc
+opt_dff

@@ -7,6 +7,7 @@ import os
 
 from cpp_interface import CppInterface
 import argparse
+import sys
 
 class ScanChainBuilder:
     @staticmethod
@@ -15,7 +16,6 @@ class ScanChainBuilder:
             prefix = "$auto$"
         r = ys.IdString.new_autoidx_with_prefix(prefix)
         return r
-
     @dataclass
     class ModuleEntry:
         scan_chains: dict[ys.Wire, "ScanChainBuilder.ModuleEntry.ScanInfo"] = field(default_factory=dict)
@@ -481,23 +481,45 @@ class ScanChainApp:
         if design_path is not None:
             if top is None:
                 raise ValueError("Top module name required when using --design.")
-            return design_path, top
+            return design_path, top, None
 
         if example is None:
             example = "counter_8bit"
         example_dir = self.example_dirs.get(example, "examples")
-        return f"{example_dir}/{example}.sv", example
+        return f"{example_dir}/{example}.sv", example, example_dir
 
-    def run(self, example: str | None = None, design_path: str | None = None, top: str | None = None):
+    def run(
+        self,
+        example: str | None = None,
+        design_path: str | None = None,
+        top: str | None = None,
+        pre_script: str | None = None,
+        post_script: str | None = None,
+    ):
         design = ys.Design()
-        design_path, top_name = self._resolve_input(example, design_path, top)
+        design_path, top_name, example_dir = self._resolve_input(example, design_path, top)
 
-        ys.run_pass(f"read_verilog -sv {design_path}", design)
-        #ys.run_pass("read_rtlil linkruncca.rtlil", design)
-        ys.run_pass(f"prep -top {top_name}", design)
+        if pre_script is None:
+            raise ValueError("Pre-scan script required. Pass --pre-script.")
+        if post_script is None:
+            raise ValueError("Post-scan script required. Pass --post-script.")
 
-        ys.run_pass("proc", design)
-        ys.run_pass("opt_dff", design)
+        os.makedirs("generated/log", exist_ok=True)
+
+        saved_stdout_fd = os.dup(1)
+        saved_stderr_fd = os.dup(2)
+        try:
+            with open("generated/log/yosys_pre.log", "w") as log_f, \
+                open("generated/log/yosys_pre.err.log", "w") as err_f:
+                os.dup2(log_f.fileno(), 1)
+                os.dup2(err_f.fileno(), 2)
+
+                ys.run_pass(f"script {pre_script}", design)
+        finally:
+            os.dup2(saved_stdout_fd, 1)
+            os.close(saved_stdout_fd)
+            os.dup2(saved_stderr_fd, 2)
+            os.close(saved_stderr_fd)
 
         print("\n\n\n\nStaring analysis\n\n")
 
@@ -511,8 +533,20 @@ class ScanChainApp:
         # ys.run_pass("opt")
 
         os.makedirs("generated/rtl", exist_ok=True)
-        ys.run_pass("write_rtlil generated/rtl/out.rtlil", design)
-        ys.run_pass("write_verilog -sv -norename generated/rtl/out.sv", design)
+
+        saved_stdout_fd = os.dup(1)
+        saved_stderr_fd = os.dup(2)
+        try:
+            with open("generated/log/yosys_post.log", "w") as log_f, \
+                open("generated/log/yosys_post.err.log", "w") as err_f:
+                os.dup2(log_f.fileno(), 1)
+                os.dup2(err_f.fileno(), 2)
+                ys.run_pass(f"script {post_script}", design)
+        finally:
+            os.dup2(saved_stdout_fd, 1)
+            os.close(saved_stdout_fd)
+            os.dup2(saved_stderr_fd, 2)
+            os.close(saved_stderr_fd)
 
         print("\n\n\n")
 
@@ -521,11 +555,15 @@ class ScanChainApp:
 
         print("SCAN CHAIN ADDITION COMPLETED\n")
 
+        # JSON output suppressed; keep stdout informational only.
+
         json_data = test.wrapper
 
         cpp_header = CppInterface.CreateCppInterface(json_data)
         callers_header = CppInterface.CreateFieldCallersHeader(json_data)
 
+        #print("\n\nC++ INTERFACE HEADER:\n")
+        #print(cpp_header)
         os.makedirs("generated/include", exist_ok=True)
         with open("generated/include/wrapper_interface.h", "w") as f:
             f.write(cpp_header)
@@ -537,9 +575,17 @@ def _parse_args():
     parser.add_argument("--example", help="Example name (defaults to counter_8bit).")
     parser.add_argument("--design", help="Path to a SystemVerilog design file.")
     parser.add_argument("--top", help="Top module name for --design.")
+    parser.add_argument("--pre-script", help="Yosys script to run before scan-chain insertion.")
+    parser.add_argument("--post-script", help="Yosys script to run after scan-chain insertion.")
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = _parse_args()
     app = ScanChainApp()
-    app.run(example=args.example, design_path=args.design, top=args.top)
+    app.run(
+        example=args.example,
+        design_path=args.design,
+        top=args.top,
+        pre_script=args.pre_script,
+        post_script=args.post_script,
+    )
