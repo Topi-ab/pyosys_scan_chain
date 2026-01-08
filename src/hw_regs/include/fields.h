@@ -29,11 +29,9 @@ public:
         return bits;
     }
 
-    static constexpr auto clk_specs = fields_def::get_clk_specs();
     static constexpr auto wr_specs = fields_def::get_wr_specs();
     static constexpr auto rd_specs = fields_def::get_rd_specs();
 
-    static constexpr auto clk_bits = spec_bits(clk_specs);
     static constexpr auto wr_bits = spec_bits(wr_specs);
     static constexpr auto rd_bits = spec_bits(rd_specs);
 
@@ -53,17 +51,11 @@ public:
         return descs;
     }
 
-    static constexpr auto clk_descs = get_field_descs(clk_specs);
     static constexpr auto wr_descs = get_field_descs(wr_specs);
     static constexpr auto rd_descs = get_field_descs(rd_specs);
 
-    static constexpr size_t num_clk_fields = clk_specs.size();
     static constexpr size_t num_wr_fields = wr_specs.size();
     static constexpr size_t num_rd_fields = rd_specs.size();
-
-    static constexpr auto clk_desc(clk_fields f) {
-        return clk_descs[static_cast<size_t>(f)];
-    }
 
     static constexpr auto wr_desc(wr_fields f) {
         return wr_descs[static_cast<size_t>(f)];

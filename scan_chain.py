@@ -3,6 +3,7 @@ from pyosys import libyosys as ys
 from dataclasses import dataclass, field
 
 import json
+import os
 
 from CppInterface import CppInterface
 
@@ -478,7 +479,7 @@ test_name = "counter_8bit"
 
 #test_name = "vhdl_linkruncca"
 
-ys.run_pass(f"read_verilog -sv {test_name}.sv", design)
+ys.run_pass(f"read_verilog -sv tests/hdl/{test_name}.sv", design)
 #ys.run_pass("read_rtlil linkruncca.rtlil", design)
 ys.run_pass(f"prep -top {test_name}", design)
 
@@ -498,8 +499,9 @@ top_module.check()
 # ys.run_pass("check", design)
 # ys.run_pass("opt")
 
-ys.run_pass("write_rtlil out.rtlil", design)
-ys.run_pass("write_verilog -sv -norename out.sv", design)
+os.makedirs("generated/rtl", exist_ok=True)
+ys.run_pass("write_rtlil generated/rtl/out.rtlil", design)
+ys.run_pass("write_verilog -sv -norename generated/rtl/out.sv", design)
 
 print("\n\n\n")
 
@@ -508,14 +510,17 @@ print(test.ScanInfo())
 
 print("SCAN CHAIN ADDITION COMPLETED\n")
 
-print(f"JSON: {test.WrapperInfo()}")
+# JSON output suppressed; keep stdout informational only.
 
 json_data = test.wrapper
 
 cpp_header = CppInterface.CreateCppInterface(json_data)
+callers_header = CppInterface.CreateFieldCallersHeader(json_data)
 
 #print("\n\nC++ INTERFACE HEADER:\n")
 #print(cpp_header)
-with open("wrapper_interface.h", "w") as f:
+os.makedirs("generated/include", exist_ok=True)
+with open("generated/include/wrapper_interface.h", "w") as f:
     f.write(cpp_header)
-
+with open("generated/include/wrapper_field_callers.h", "w") as f:
+    f.write(callers_header)
