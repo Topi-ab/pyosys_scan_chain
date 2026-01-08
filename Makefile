@@ -41,6 +41,6 @@ $(DEBUG_BIN): $(SMOKE_SRC) $(GEN_FILES)
 
 clean:
 	rm -f $(SMOKE_BIN) $(DEBUG_BIN) $(GEN_FILES) generated/rtl/out.rtlil generated/rtl/out.sv out.rtlil out.sv
-	rm -f generated/rtl/scan_chain.rtlil
+	rm -f generated/rtl/emulator_wrapper.rtlil generated/rtl/emulator_wrapper.sv generated/rtl/scan_chain_hash.rtlil
 	rm -f generated/log/yosys_pre.log generated/log/yosys_pre.err.log generated/log/yosys_post.log generated/log/yosys_post.err.log
 	rm -f generated/log/yosys_hash.log generated/log/yosys_hash.err.log

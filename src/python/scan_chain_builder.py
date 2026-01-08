@@ -9,6 +9,7 @@ from cpp_interface import CppInterface
 import argparse
 import sys
 import hashlib
+import tempfile
 
 class ScanChainBuilder:
     @staticmethod
@@ -552,26 +553,32 @@ class ScanChainApp:
         top_module.check()
 
         os.makedirs("generated/rtl", exist_ok=True)
+        os.makedirs("generated/tmp", exist_ok=True)
 
-        scan_rtlil_path = "generated/rtl/scan_chain.rtlil"
-        saved_stdout_fd = os.dup(1)
-        saved_stderr_fd = os.dup(2)
-        try:
-            with open(f"{log_dir}/yosys_hash.log", "w") as log_f, \
-                open(f"{log_dir}/yosys_hash.err.log", "w") as err_f:
-                os.dup2(log_f.fileno(), 1)
-                os.dup2(err_f.fileno(), 2)
-                ys.run_pass(f"write_rtlil {scan_rtlil_path}", design)
-        finally:
-            os.dup2(saved_stdout_fd, 1)
-            os.close(saved_stdout_fd)
-            os.dup2(saved_stderr_fd, 2)
-            os.close(saved_stderr_fd)
+        def _hash_design_rtlil():
+            fd, path = tempfile.mkstemp(prefix="scan_chain_", suffix=".rtlil", dir="generated/tmp")
+            os.close(fd)
 
-        with open(scan_rtlil_path, "rb") as f:
-            digest = hashlib.sha256(f.read()).digest()
-        dut_hash = int.from_bytes(digest[:8], "big")
+            saved_stdout_fd = os.dup(1)
+            saved_stderr_fd = os.dup(2)
+            try:
+                with open(f"{log_dir}/yosys_hash.log", "w") as log_f, \
+                    open(f"{log_dir}/yosys_hash.err.log", "w") as err_f:
+                    os.dup2(log_f.fileno(), 1)
+                    os.dup2(err_f.fileno(), 2)
+                    ys.run_pass(f"write_rtlil {path}", design)
+            finally:
+                os.dup2(saved_stdout_fd, 1)
+                os.close(saved_stdout_fd)
+                os.dup2(saved_stderr_fd, 2)
+                os.close(saved_stderr_fd)
 
+            with open(path, "rb") as f:
+                digest = hashlib.sha256(f.read()).digest()
+            os.remove(path)
+            return int.from_bytes(digest[:8], "big")
+
+        dut_hash = _hash_design_rtlil()
         test.processTopWrapper(dut_hash)
 
         saved_stdout_fd = os.dup(1)
