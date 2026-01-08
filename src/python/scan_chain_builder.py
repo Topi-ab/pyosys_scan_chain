@@ -490,6 +490,7 @@ class ScanChainApp:
     def __init__(self):
         self.example_dirs = {
             "counter_8bit": "examples/8bit_counter",
+            "pipeline_2x2": "examples/pipeline_2x2",
             "test_dffsr": "examples/test_dffsr",
             "test_fsm": "examples/test_fsm",
             "test_multiclock": "examples/test_multiclock",
