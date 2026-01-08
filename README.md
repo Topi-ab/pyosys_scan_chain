@@ -59,6 +59,11 @@ scan-chain-builder \
   - `examples/vhdl/`
   - `examples/mixed/`
 
+### pre_scan.ys and post_scan.ys
+
+- `pre_scan.ys` runs before scan-chain insertion. It should read the RTL, set the top module, and perform any required prep/cleanup passes.
+- `post_scan.ys` runs after scan-chain insertion and wrapper generation. It typically writes the final RTLIL/SystemVerilog outputs.
+
 ## Outputs
 
 Generated outputs are placed under `generated/`:

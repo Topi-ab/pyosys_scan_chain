@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 venv/
+*.egg-info/
+build/
+dist/
+.venv/
 
 # Generated outputs
 generated/
