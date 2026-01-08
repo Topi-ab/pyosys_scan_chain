@@ -1,0 +1,5 @@
+# Pre-scan Yosys script
+read_verilog -sv examples/axi_gpio_10x16/axi_gpio_10x16.sv
+prep -top axi_gpio_10x16
+proc
+opt_dff

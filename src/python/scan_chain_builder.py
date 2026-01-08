@@ -487,29 +487,15 @@ class ScanChainBuilder:
         
 
 class ScanChainApp:
-    def __init__(self):
-        self.example_dirs = {
-            "counter_8bit": "examples/8bit_counter",
-            "pipeline_2x2": "examples/pipeline_2x2",
-            "test_dffsr": "examples/test_dffsr",
-            "test_fsm": "examples/test_fsm",
-            "test_multiclock": "examples/test_multiclock",
-        }
-
-    def _resolve_input(self, example: str | None, design_path: str | None, top: str | None):
+    def _resolve_input(self, design_path: str | None, top: str | None):
         if design_path is not None:
             if top is None:
                 raise ValueError("Top module name required when using --design.")
-            return design_path, top, None
-
-        if example is None:
-            example = "counter_8bit"
-        example_dir = self.example_dirs.get(example, "examples")
-        return f"{example_dir}/{example}.sv", example, example_dir
+            return design_path, top
+        raise ValueError("Design path required. Pass --design and --top.")
 
     def run(
         self,
-        example: str | None = None,
         design_path: str | None = None,
         top: str | None = None,
         pre_script: str | None = None,
@@ -518,7 +504,7 @@ class ScanChainApp:
         json_path: str | None = None,
     ):
         design = ys.Design()
-        design_path, top_name, example_dir = self._resolve_input(example, design_path, top)
+        design_path, top_name = self._resolve_input(design_path, top)
 
         if pre_script is None:
             raise ValueError("Pre-scan script required. Pass --pre-script.")
@@ -543,8 +529,6 @@ class ScanChainApp:
             os.close(saved_stdout_fd)
             os.dup2(saved_stderr_fd, 2)
             os.close(saved_stderr_fd)
-
-        print("\n\n\n\nStaring analysis\n\n")
 
         top_module = design.top_module()
 
@@ -596,13 +580,6 @@ class ScanChainApp:
             os.dup2(saved_stderr_fd, 2)
             os.close(saved_stderr_fd)
 
-        print("\n\n\n")
-
-        print("Scan chain info for top module:")
-        print(test.ScanInfo())
-
-        print("SCAN CHAIN ADDITION COMPLETED\n")
-
         json_data = test.wrapper
 
         cpp_header = CppInterface.CreateCppInterface(json_data)
@@ -621,7 +598,6 @@ class ScanChainApp:
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Generate scan-chain wrapper and headers.")
-    parser.add_argument("--example", help="Example name (defaults to counter_8bit).")
     parser.add_argument("--design", help="Path to a SystemVerilog design file.")
     parser.add_argument("--top", help="Top module name for --design.")
     parser.add_argument("--pre-script", help="Yosys script to run before scan-chain insertion.")
@@ -634,7 +610,6 @@ if __name__ == "__main__":
     args = _parse_args()
     app = ScanChainApp()
     app.run(
-        example=args.example,
         design_path=args.design,
         top=args.top,
         pre_script=args.pre_script,

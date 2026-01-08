@@ -12,7 +12,8 @@ GENERATOR := $(VENV_PY)
 GEN_SCRIPT := src/python/scan_chain_builder.py
 PRE_SCRIPT ?= examples/8bit_counter/pre_scan.ys
 POST_SCRIPT ?= examples/8bit_counter/post_scan.ys
-EXAMPLE ?= counter_8bit
+DESIGN ?= examples/8bit_counter/counter_8bit.sv
+TOP ?= counter_8bit
 LOG_DIR ?= generated/log
 JSON_OUT ?= generated/wrapper.json
 
@@ -22,20 +23,23 @@ GEN_FILES := generated/include/wrapper_interface.h generated/include/wrapper_fie
 
 all: $(SMOKE_BIN) $(DEBUG_BIN)
 
-.PHONY: example-counter_8bit example-pipeline_2x2
+.PHONY: example-counter_8bit example-pipeline_2x2 example-axi_gpio_10x16
 
 example-counter_8bit:
-	$(MAKE) EXAMPLE=counter_8bit PRE_SCRIPT=examples/8bit_counter/pre_scan.ys POST_SCRIPT=examples/8bit_counter/post_scan.ys
+	$(MAKE) DESIGN=examples/8bit_counter/counter_8bit.sv TOP=counter_8bit PRE_SCRIPT=examples/8bit_counter/pre_scan.ys POST_SCRIPT=examples/8bit_counter/post_scan.ys
 
 example-pipeline_2x2:
-	$(MAKE) EXAMPLE=pipeline_2x2 PRE_SCRIPT=examples/pipeline_2x2/pre_scan.ys POST_SCRIPT=examples/pipeline_2x2/post_scan.ys
+	$(MAKE) DESIGN=examples/pipeline_2x2/pipeline_2x2.sv TOP=pipeline_2x2 PRE_SCRIPT=examples/pipeline_2x2/pre_scan.ys POST_SCRIPT=examples/pipeline_2x2/post_scan.ys
+
+example-axi_gpio_10x16:
+	$(MAKE) DESIGN=examples/axi_gpio_10x16/axi_gpio_10x16.sv TOP=axi_gpio_10x16 PRE_SCRIPT=examples/axi_gpio_10x16/pre_scan.ys POST_SCRIPT=examples/axi_gpio_10x16/post_scan.ys
 
 $(SMOKE_BIN): $(SMOKE_SRC) $(GEN_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
 $(GEN_FILES): venv $(GEN_SCRIPT) src/python/cpp_interface.py
-	$(GENERATOR) $(GEN_SCRIPT) --example $(EXAMPLE) --pre-script $(PRE_SCRIPT) --post-script $(POST_SCRIPT) --log-dir $(LOG_DIR) --json $(JSON_OUT)
+	$(GENERATOR) $(GEN_SCRIPT) --design $(DESIGN) --top $(TOP) --pre-script $(PRE_SCRIPT) --post-script $(POST_SCRIPT) --log-dir $(LOG_DIR) --json $(JSON_OUT)
 
 run: $(SMOKE_BIN)
 	$(SMOKE_BIN)
