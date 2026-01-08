@@ -8,6 +8,7 @@ import os
 from cpp_interface import CppInterface
 import argparse
 import sys
+import hashlib
 
 class ScanChainBuilder:
     @staticmethod
@@ -345,7 +346,7 @@ class ScanChainBuilder:
     def generatePorts(self):
         self.generateModulePorts()
     
-    def CreateTopWrapper(self):
+    def CreateTopWrapper(self, dut_hash: int):
         self.wrapper = {}
         self.wrapper['dut_name'] = self._top_module.name.str()
         self.wrapper['inputs'] = []
@@ -355,6 +356,11 @@ class ScanChainBuilder:
         self.wrapper['asserts'] = []
         self.wrapper['assumes'] = []
         self.wrapper['covers'] = []
+        self.wrapper['dut_hash'] = dut_hash
+        self.wrapper['hash_out'] = {
+            "name": "\\dut_hash_out",
+            "width": 64,
+        }
 
         top_module = self._top_module
         wires = list(top_module.wires_.values())
@@ -364,6 +370,7 @@ class ScanChainBuilder:
         output_bits = 0
         clk_ports = []
         clk_bits = 0
+        hash_bits = 64
 
         scan_ports = set()
         for clk in self.ModuleScanportInfo[top_module].scan_chains:
@@ -398,6 +405,8 @@ class ScanChainBuilder:
         dut_in.port_input = True
         dut_out = top_wrapper.addWire("\\dut_out", output_bits + 1)
         dut_out.port_output = True
+        dut_hash_out = top_wrapper.addWire("\\dut_hash_out", hash_bits)
+        dut_hash_out.port_output = True
         top_wrapper.fixup_ports()
 
         dut_cell = top_wrapper.addCell("\\dut", top_module.name)
@@ -426,6 +435,10 @@ class ScanChainBuilder:
                 "dut_out": wire.name.str(),
             })
             pos += wire.width
+        hash_bits_list = [((dut_hash >> i) & 1) == 1 for i in range(hash_bits)]
+        hash_const = ys.Const(hash_bits_list)
+        hash_sig = ys.SigSpec(hash_const)
+        top_wrapper.connect(ys.SigSpec(dut_hash_out), hash_sig)
         pos = 0
         for clk in self.ModuleScanportInfo[top_module].scan_chains:
             dut_cell.setPort(clk.name, ys.SigSpec(ys.SigSpec(clk_in)[pos], clk.width))
@@ -467,7 +480,9 @@ class ScanChainBuilder:
         self.processClocks()
         self.generatePorts()
         self.generateMuxes()
-        self.CreateTopWrapper()
+
+    def processTopWrapper(self, dut_hash: int):
+        self.CreateTopWrapper(dut_hash)
         
 
 class ScanChainApp:
@@ -537,6 +552,27 @@ class ScanChainApp:
         top_module.check()
 
         os.makedirs("generated/rtl", exist_ok=True)
+
+        scan_rtlil_path = "generated/rtl/scan_chain.rtlil"
+        saved_stdout_fd = os.dup(1)
+        saved_stderr_fd = os.dup(2)
+        try:
+            with open(f"{log_dir}/yosys_hash.log", "w") as log_f, \
+                open(f"{log_dir}/yosys_hash.err.log", "w") as err_f:
+                os.dup2(log_f.fileno(), 1)
+                os.dup2(err_f.fileno(), 2)
+                ys.run_pass(f"write_rtlil {scan_rtlil_path}", design)
+        finally:
+            os.dup2(saved_stdout_fd, 1)
+            os.close(saved_stdout_fd)
+            os.dup2(saved_stderr_fd, 2)
+            os.close(saved_stderr_fd)
+
+        with open(scan_rtlil_path, "rb") as f:
+            digest = hashlib.sha256(f.read()).digest()
+        dut_hash = int.from_bytes(digest[:8], "big")
+
+        test.processTopWrapper(dut_hash)
 
         saved_stdout_fd = os.dup(1)
         saved_stderr_fd = os.dup(2)

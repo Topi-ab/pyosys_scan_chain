@@ -49,6 +49,7 @@ class CppInterface:
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 #include "fields.h"
@@ -56,6 +57,10 @@ class CppInterface:
 class WrapperInterface {
 public:
 """
+        if json.get("dut_hash") is not None:
+            r += f"    static constexpr uint64_t dut_hash = 0x{json['dut_hash']:016x};\n"
+            r += "    static constexpr size_t dut_hash_bits = 64;\n"
+            r += "    static constexpr std::string_view dut_hash_out_name = \"DUT_HASH_OUT\";\n\n"
         r += """    enum class clk_fields: std::size_t {
 """
         first = True
