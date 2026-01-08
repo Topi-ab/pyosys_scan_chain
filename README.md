@@ -6,15 +6,23 @@ Generate scan-chain wrappers for synthesizable RTL designs using Yosys via `pyos
 
 - Python 3.10+ (tested on 3.12, Ubuntu 24.04)
 - `pyosys` (bundles Yosys; no separate Yosys install required)
+- Ubuntu packages:
+  - `python3`, `python3-venv`, `python3-pip`
+  - `g++`, `make` (for the C++ smoke test)
+
+Install on Ubuntu:
+
+```
+sudo apt update && sudo apt install -y python3 python3-venv python3-pip g++ make
+```
 
 ## Getting started
 
 ### 1) Install (pyproject.toml)
 
 ```
-python3 -m venv venv
+make venv
 . venv/bin/activate
-pip install -e .
 ```
 
 This installs the CLI entry point:
@@ -26,12 +34,13 @@ scan-chain-builder --help
 ### 2) Quick run via Makefile
 
 ```
-make example-sv_8bit_counter
+make
 ```
 
 Other built-in examples:
 
 ```
+make example-sv_8bit_counter
 make example-sv_pipeline_2x2
 make example-sv_axi_gpio_10x16
 ```
@@ -40,10 +49,10 @@ make example-sv_axi_gpio_10x16
 
 ```
 scan-chain-builder \
-  --design examples/sv/sv_8bit_counter/sv_8bit_counter.sv \
-  --top sv_8bit_counter \
-  --pre-script examples/sv/sv_8bit_counter/pre_scan.ys \
-  --post-script examples/sv/sv_8bit_counter/post_scan.ys \
+  --design examples/sv/sv_pipeline_2x2/sv_pipeline_2x2.sv \
+  --top sv_pipeline_2x2 \
+  --pre-script examples/sv/sv_pipeline_2x2/pre_scan.ys \
+  --post-script examples/sv/sv_pipeline_2x2/post_scan.ys \
   --log-dir generated/log \
   --json generated/wrapper.json
 ```
@@ -92,19 +101,26 @@ The C++ header `generated/include/wrapper_interface.h` describes bit positions f
 
 - `make clean` removes generated artifacts (keeps `venv/`).
 - `make build-debug` builds with `WRAPPER_CALLERS_DEBUG` for extra C++ logging.
+- Docker smoke test: `scripts/docker/test_in_docker.sh`
 
 ## Vivado project creation (Linux)
 
 1) Generate RTL first:
 
 ```
-make example-sv_8bit_counter
+make
 ```
 
-2) Run Vivado to create a project and open elaborated netlist viewer:
+2) Run the helper script (opens existing project if present):
 
 ```
-vivado -source scripts/vivado/create_project.tcl
+scripts/vivado/run_vivado.sh
 ```
 
-This creates a project under `generated/vivado` and opens the elaborated RTL view.
+To force a clean rebuild of the project:
+
+```
+scripts/vivado/run_vivado.sh --recreate-project
+```
+
+This creates/opens the project under `generated/vivado` and opens the elaborated RTL view.

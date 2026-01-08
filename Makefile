@@ -8,12 +8,14 @@ DEBUG_BIN := $(BIN_DIR)/test_wrapper_interface.debug
 SMOKE_SRC := src/tests/cpp/test_wrapper_interface.cpp
 VENV_DIR := venv
 VENV_PY := $(VENV_DIR)/bin/python
+VENV_PIP := $(VENV_DIR)/bin/pip
+VENV_STAMP := $(VENV_DIR)/.deps.stamp
 GENERATOR := $(VENV_PY)
 GEN_SCRIPT := src/python/scan_chain_builder.py
-PRE_SCRIPT ?= examples/sv/sv_8bit_counter/pre_scan.ys
-POST_SCRIPT ?= examples/sv/sv_8bit_counter/post_scan.ys
-DESIGN ?= examples/sv/sv_8bit_counter/sv_8bit_counter.sv
-TOP ?= sv_8bit_counter
+PRE_SCRIPT ?= examples/sv/sv_pipeline_2x2/pre_scan.ys
+POST_SCRIPT ?= examples/sv/sv_pipeline_2x2/post_scan.ys
+DESIGN ?= examples/sv/sv_pipeline_2x2/sv_pipeline_2x2.sv
+TOP ?= sv_pipeline_2x2
 LOG_DIR ?= generated/log
 JSON_OUT ?= generated/wrapper.json
 
@@ -38,7 +40,7 @@ $(SMOKE_BIN): $(SMOKE_SRC) $(GEN_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
-$(GEN_FILES): venv $(GEN_SCRIPT) src/python/cpp_interface.py
+$(GEN_FILES): deps $(GEN_SCRIPT) src/python/cpp_interface.py
 	$(GENERATOR) $(GEN_SCRIPT) --design $(DESIGN) --top $(TOP) --pre-script $(PRE_SCRIPT) --post-script $(POST_SCRIPT) --log-dir $(LOG_DIR) --json $(JSON_OUT)
 
 run: $(SMOKE_BIN)
@@ -55,6 +57,12 @@ $(DEBUG_BIN): $(SMOKE_SRC) $(GEN_FILES)
 
 venv:
 	@test -x $(VENV_PY) || python3 -m venv $(VENV_DIR)
+
+deps: $(VENV_STAMP)
+
+$(VENV_STAMP): pyproject.toml | venv
+	$(VENV_PIP) install -e .
+	@touch $(VENV_STAMP)
 
 clean:
 	rm -f $(SMOKE_BIN) $(DEBUG_BIN) $(GEN_FILES) generated/rtl/out.rtlil generated/rtl/out.sv out.rtlil out.sv

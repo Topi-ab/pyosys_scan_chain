@@ -11,7 +11,7 @@ class hw_access_debug {
     static constexpr size_t first_wr_word_address = 0x10;
     static constexpr size_t first_rd_word_address = 0x10;
 
-    hw_access_debug(const char *uio_dev) {
+    hw_access_debug([[maybe_unused]] const char *uio_dev) {
         // std::cout << "Opening UIO dev: " << uio_dev << "\n";
         fd_ = 1;
     }
