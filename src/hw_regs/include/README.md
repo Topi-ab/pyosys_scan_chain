@@ -1,4 +1,4 @@
-# templated class sturcure to assist getting / settings bit-fields for with HW registers
+# templated class structure to assist getting / setting bit-fields for HW registers
 
 ## hw_access
 
@@ -7,16 +7,17 @@ Bottomline is </i>hw_access</i> class (`hw_access_aarch64.h` as an example) whic
 => <b>This class needs to reside in memory as an object.</b><br>
 => <b>User may need to adapt this file to his needs.</b>
 
-- `wr_word_t` as a type which is to be written at single call (relfects the underlying HW capabilities).
+- `wr_word_t` as a type which is to be written at single call (reflects the underlying HW capabilities).
 - `rd_word_t` as a type which is read from hw in single call.
 - `wr_raw()` which writes a single word to word address (not byte address).
 - `rd_raw()` which reads a single word from word address.
-- `wr()` which writes a single word to offsett address (actual offset is private in this class).
+- `wr()` which writes a single word to offset address (actual offset is private in this class).
 - `rd()` which reads a single word from offset address (wr and rd offsets can be different).
 
 The example `hw_access_aarch64.h` supports word types from uint8_t upto __uint128_t, separate for read and write.
 
 This is a class that user needs to create/modify if method to access to HW register is different.
+Use `hw_access_debug.h` for a dummy backend in tests.
 
 ## shadow
 
@@ -40,7 +41,7 @@ and stored to cache entry, and dirty is marked non-dirty. If the dirty flag is n
 This class provides:
 
 - `wr_word_t` as a type of single write call. This is grabbed from <i>hw_access</i>.
-- `rd_word_t` as a type of single read call.hw_access_aarch64.h`.
+- `rd_word_t` as a type of single read call.
 - `write()` which writes data to the wr-cache entry and marks entry dirty. Data mask is used to tell which bits are to be modified.
 - `wr_flush()` which dumps the wr-cache to hw registers and clears dirty flags.
 - `read()` which reads data from rd-cache or from hw-interface, and clears entry's dirty flag.
@@ -61,35 +62,35 @@ This class provides:
 
 - `write_bits()` for any user-defined type supporting required bit operations. This will split the write to several <i>hw_access::wr_word_t</i> chunks and calls <i>shadow.write()</i>.
 - `wr_hw()` which writes a single hw-word to <i>hw_accces</i>.
-- `read_bits()` for any user-defined type supporting required bit operations. This will split the reea to several <i>hw_access::rd_word_t</i> reads from <i>shadow.read()</i> and merges the data to complete bit-vector.
+- `read_bits()` for any user-defined type supporting required bit operations. This will split the read to several <i>hw_access::rd_word_t</i> reads from <i>shadow.read()</i> and merges the data to complete bit-vector.
 - `rd_hw()` which reads a single hw-word from <i>hw_accces</i>.
 - `wr_flush()` which calls underlying <i>shadow.wr_flush()</i>.
 - `rd_flush()` which calls underlying <i>shadow.rd_flush()</i>.
 
 ## fields
 
-=> <b>This class is a template class only, and does not provide any object to wrok on.</b><br>
+=> <b>This class is a template class only, and does not provide any object to work on.</b><br>
 => <b>User does not need to modify this file.</b>
 
 This class converts user-defined fields specifications to bit-addresses and bit-widths.
 
-Data sematics is 
+Data semantics is 
 - spec (specification) telling field names and their widhts.
 - desc (descriptor) telling field's bit-address and bit-width. 
 
 This class provides:
 
-- `wr_fields` as a type (union) where all user defined writable (input to FPGA DUT) fields are listed.
-- `rd_fields` as a type (union) where all user defined readable (output from FPGA DUT) fields are listed.
+- `wr_fields` as a type (enum) where all user defined writable (input to FPGA DUT) fields are listed.
+- `rd_fields` as a type (enum) where all user defined readable (output from FPGA DUT) fields are listed.
 - `spec_bits()` as a consteval (calculated on compile time) function telling how many bits single spec has.
 - `wr_desc()` to get a desc from wr field name.
 - `rd_desc()` to get a desc from rd field name.
 
-This class also double-checks that user supplied fields and their widths-definitions have equal number of entries.
+This class assumes user supplied fields and their width definitions have equal number of entries.
 
 ## user defined fields
 
-=> <b>This class is a template class only, and does not provide any object to wrok on.</b><br>
+=> <b>This class is a template class only, and does not provide any object to work on.</b><br>
 => <b>User may need to adapt this file to his needs.</b>
 
 `fields_linkruncca.h` is an example file, which will be user-modified to meet the FPGA DUT requirements (I/O definitions).
@@ -97,8 +98,8 @@ This class also double-checks that user supplied fields and their widths-definit
 The example code uses `FpgaGenerics_linkrucca` as a means to calculate interface bit-widths based on configuration. The corresponding VHDL code has the exact same calculation for DUT bit witdhts.
 
 User needs to provide:
-- `enum class wr_fields: size_t...` definiton for all wr fields. The last entry needs to be `END_OF_FIELDS`.
-- `enum class rd_fields: size_t...` definiton for all rd fields. The last entry needs to be `END_OF_FIELDS`.
+- `enum class wr_fields: size_t...` definition for all wr fields.
+- `enum class rd_fields: size_t...` definition for all rd fields.
 - `get_wr_specs()` contents listing all bit widths for each field. The list needs to be in order they appear in FPGA DUT interface.
 - `get_rd_specs()` contents listing all bit widths for each field. The list needs to be in order they appear in FPGA DUT interface.
 
