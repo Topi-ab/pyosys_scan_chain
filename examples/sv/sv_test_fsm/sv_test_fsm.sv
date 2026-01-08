@@ -1,4 +1,4 @@
-module test_fsm(
+module sv_test_fsm(
     input  logic        clk_in,
     input  logic        sreset_in,
     input  logic [1:0]  a_in,

@@ -8,7 +8,7 @@ module second_level(
     end
 endmodule
 
-module counter_8bit(
+module sv_8bit_counter(
     input logic clk_in,
     input logic sreset_in,
     input logic en_in,

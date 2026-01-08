@@ -1,4 +1,4 @@
-module axi_gpio_10x16 (
+module sv_axi_gpio_10x16 (
     input  logic        clk_in,
     input  logic        sreset_in,
 

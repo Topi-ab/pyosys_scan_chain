@@ -25,7 +25,7 @@ module submod(
     end
 endmodule
 
-module test_multiclock(
+module sv_test_multiclock(
     input logic areset_in,
 
     input logic a_clk_in,

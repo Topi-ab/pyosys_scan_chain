@@ -1,5 +1,0 @@
-# Pre-scan Yosys script
-read_verilog -sv examples/8bit_counter/counter_8bit.sv
-prep -top counter_8bit
-proc
-opt_dff

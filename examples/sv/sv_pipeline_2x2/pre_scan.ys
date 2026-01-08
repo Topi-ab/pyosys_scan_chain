@@ -1,0 +1,5 @@
+# Pre-scan Yosys script
+read_verilog -sv examples/sv/sv_pipeline_2x2/sv_pipeline_2x2.sv
+prep -top sv_pipeline_2x2
+proc
+opt_dff

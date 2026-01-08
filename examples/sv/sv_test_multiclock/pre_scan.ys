@@ -1,0 +1,5 @@
+# Pre-scan Yosys script
+read_verilog -sv examples/sv/sv_test_multiclock/sv_test_multiclock.sv
+prep -top sv_test_multiclock
+proc
+opt_dff

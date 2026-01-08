@@ -10,10 +10,10 @@ VENV_DIR := venv
 VENV_PY := $(VENV_DIR)/bin/python
 GENERATOR := $(VENV_PY)
 GEN_SCRIPT := src/python/scan_chain_builder.py
-PRE_SCRIPT ?= examples/8bit_counter/pre_scan.ys
-POST_SCRIPT ?= examples/8bit_counter/post_scan.ys
-DESIGN ?= examples/8bit_counter/counter_8bit.sv
-TOP ?= counter_8bit
+PRE_SCRIPT ?= examples/sv/sv_8bit_counter/pre_scan.ys
+POST_SCRIPT ?= examples/sv/sv_8bit_counter/post_scan.ys
+DESIGN ?= examples/sv/sv_8bit_counter/sv_8bit_counter.sv
+TOP ?= sv_8bit_counter
 LOG_DIR ?= generated/log
 JSON_OUT ?= generated/wrapper.json
 
@@ -23,16 +23,16 @@ GEN_FILES := generated/include/wrapper_interface.h generated/include/wrapper_fie
 
 all: $(SMOKE_BIN) $(DEBUG_BIN)
 
-.PHONY: example-counter_8bit example-pipeline_2x2 example-axi_gpio_10x16
+.PHONY: example-sv_8bit_counter example-sv_pipeline_2x2 example-sv_axi_gpio_10x16
 
-example-counter_8bit:
-	$(MAKE) DESIGN=examples/8bit_counter/counter_8bit.sv TOP=counter_8bit PRE_SCRIPT=examples/8bit_counter/pre_scan.ys POST_SCRIPT=examples/8bit_counter/post_scan.ys
+example-sv_8bit_counter:
+	$(MAKE) DESIGN=examples/sv/sv_8bit_counter/sv_8bit_counter.sv TOP=sv_8bit_counter PRE_SCRIPT=examples/sv/sv_8bit_counter/pre_scan.ys POST_SCRIPT=examples/sv/sv_8bit_counter/post_scan.ys
 
-example-pipeline_2x2:
-	$(MAKE) DESIGN=examples/pipeline_2x2/pipeline_2x2.sv TOP=pipeline_2x2 PRE_SCRIPT=examples/pipeline_2x2/pre_scan.ys POST_SCRIPT=examples/pipeline_2x2/post_scan.ys
+example-sv_pipeline_2x2:
+	$(MAKE) DESIGN=examples/sv/sv_pipeline_2x2/sv_pipeline_2x2.sv TOP=sv_pipeline_2x2 PRE_SCRIPT=examples/sv/sv_pipeline_2x2/pre_scan.ys POST_SCRIPT=examples/sv/sv_pipeline_2x2/post_scan.ys
 
-example-axi_gpio_10x16:
-	$(MAKE) DESIGN=examples/axi_gpio_10x16/axi_gpio_10x16.sv TOP=axi_gpio_10x16 PRE_SCRIPT=examples/axi_gpio_10x16/pre_scan.ys POST_SCRIPT=examples/axi_gpio_10x16/post_scan.ys
+example-sv_axi_gpio_10x16:
+	$(MAKE) DESIGN=examples/sv/sv_axi_gpio_10x16/sv_axi_gpio_10x16.sv TOP=sv_axi_gpio_10x16 PRE_SCRIPT=examples/sv/sv_axi_gpio_10x16/pre_scan.ys POST_SCRIPT=examples/sv/sv_axi_gpio_10x16/post_scan.ys
 
 $(SMOKE_BIN): $(SMOKE_SRC) $(GEN_FILES)
 	@mkdir -p $(BIN_DIR)

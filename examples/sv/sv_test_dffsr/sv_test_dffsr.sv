@@ -1,4 +1,4 @@
-module test_dffsr(
+module sv_test_dffsr(
     input logic clk_in,
     input logic set_in,
     input logic clr_in,

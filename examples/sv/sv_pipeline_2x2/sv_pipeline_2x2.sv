@@ -1,4 +1,4 @@
-module pipeline_2x2 (
+module sv_pipeline_2x2 (
     input logic clk_in,
     input logic a_0_in,
     input logic a_1_in,
