@@ -1,13 +1,13 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++20 -O2 -Wall -Wextra -Wpedantic
-INCLUDES := -I. -Igenerated/include -Isrc/hw_regs/include
+INCLUDES := -I. -Igenerated/include -Isrc -Isrc/hw_regs/include
 
 BIN_DIR := generated/bin
 SMOKE_BIN := $(BIN_DIR)/test_wrapper_interface
 DEBUG_BIN := $(BIN_DIR)/test_wrapper_interface.debug
-SMOKE_SRC := src/test/cpp/test_wrapper_interface.cpp
+SMOKE_SRC := src/tests/cpp/test_wrapper_interface.cpp
 GENERATOR := venv/bin/python
-GEN_SCRIPT := scan_chain.py
+GEN_SCRIPT := src/python/scan_chain.py
 
 GEN_FILES := generated/include/wrapper_interface.h generated/include/wrapper_field_callers.h
 
@@ -19,7 +19,7 @@ $(SMOKE_BIN): $(SMOKE_SRC) $(GEN_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $< -o $@
 
-$(GEN_FILES): $(GEN_SCRIPT) CppInterface.py
+$(GEN_FILES): $(GEN_SCRIPT) src/python/cpp_interface.py
 	$(GENERATOR) $(GEN_SCRIPT)
 
 run: $(SMOKE_BIN)

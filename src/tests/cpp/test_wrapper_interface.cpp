@@ -5,7 +5,7 @@
 
 #include "generated/include/wrapper_field_callers.h"
 #include "generated/include/wrapper_interface.h"
-#include "src/hw_regs/include/hw_access_debug.h"
+#include "hw_regs/include/hw_access_debug.h"
 
 int main() {
     // Smoke-test enum name helpers from generated interface.

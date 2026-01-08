@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import json
 import os
 
-from CppInterface import CppInterface
+from cpp_interface import CppInterface
 
 def fresh_id(prefix: str = None) -> ys.IdString:
     if prefix is None:
@@ -479,7 +479,14 @@ test_name = "counter_8bit"
 
 #test_name = "vhdl_linkruncca"
 
-ys.run_pass(f"read_verilog -sv tests/hdl/{test_name}.sv", design)
+example_dirs = {
+    "counter_8bit": "examples/8bit_counter",
+    "test_dffsr": "examples/test_dffsr",
+    "test_fsm": "examples/test_fsm",
+    "test_multiclock": "examples/test_multiclock",
+}
+example_dir = example_dirs.get(test_name, "examples")
+ys.run_pass(f"read_verilog -sv {example_dir}/{test_name}.sv", design)
 #ys.run_pass("read_rtlil linkruncca.rtlil", design)
 ys.run_pass(f"prep -top {test_name}", design)
 

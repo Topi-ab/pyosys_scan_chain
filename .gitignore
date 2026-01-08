@@ -1,8 +1,19 @@
-*.ys
-*.rtlil
-*.so
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Generated outputs
+generated/
+out.rtlil
+out.sv
+
+# Build artifacts
 *.o
-*.cf
-*.jou
-*.log
-.venv/
+*.a
+*.so
+*.dylib
+*.dll
+
+# OS/editor
+.DS_Store
