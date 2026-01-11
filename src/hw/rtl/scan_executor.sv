@@ -1,6 +1,11 @@
 module sv_scan_executor #(
-    parameter int SCAN_CHAIN_LEN = 792,
-    parameter int DATA_BITS      = 16
+    parameter int unsigned NUM_CHAINS = 1,
+
+
+    parameter int SCAN_CHAIN_LEN [NUM_CHAINS]   = '{default: 792},
+
+
+    parameter int DATA_BITS = 16
 ) (
     input  logic clk_in,
     input  logic sreset_in,
@@ -9,13 +14,13 @@ module sv_scan_executor #(
     input  logic execute_valid_in,
 
     output logic scan_enable_out,
-    output logic scan_clk_en_out,
-    input  logic from_chain_in,
-    output logic to_chain_out,
+    output logic [NUM_CHAINS-1:0] scan_clk_en_out,
+    input  logic [NUM_CHAINS-1:0] from_chain_in,
+    output logic [NUM_CHAINS-1:0] to_chain_out,
 
-    input  logic captured_ready_in,
-    output logic captured_valid_out,
-    output logic [DATA_BITS-1:0] captured_data_out
+    input  logic [NUM_CHAINS-1:0] captured_ready_in,
+    output logic [NUM_CHAINS-1:0] captured_valid_out,
+    output logic [NUM_CHAINS-1:0][DATA_BITS-1:0] captured_data_out
 );
 
     initial begin

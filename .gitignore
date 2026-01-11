@@ -11,6 +11,7 @@ dist/
 generated/
 out.rtlil
 out.sv
+**/tmp/
 
 # Build artifacts
 *.o
